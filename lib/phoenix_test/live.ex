@@ -746,10 +746,15 @@ defmodule PhoenixTest.Live do
 
   defp maybe_sync_current_path(session, _timeout), do: session
 
-  defp fetch_patch_path(view) do
-    assert_patch(view, 0)
-  rescue
-    ArgumentError -> :no_path
+  # `assert_patch(view, 0)` is not a safe poll: when it times out, LiveViewTest flushes
+  # navigation messages to build its error, so a patch that arrives in that window is
+  # consumed and lost. Receive directly instead.
+  defp fetch_patch_path(%{proxy: {ref, topic, _}}) do
+    receive do
+      {^ref, {:patch, ^topic, %{to: path}}} -> path
+    after
+      0 -> :no_path
+    end
   end
 
   defp set_operation(session, name, rendered_html \\ nil) do
