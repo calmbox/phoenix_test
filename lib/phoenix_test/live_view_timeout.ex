@@ -22,6 +22,30 @@ defmodule PhoenixTest.LiveViewTimeout do
     handle_watched_messages_with_timeout(session, timeout, action, fetch_redirect_info)
   end
 
+  # Positive assertions hold as soon as they hold, so they try once before the first interval wait.
+  # Negative assertions keep with_timeout/4's initial wait so pending async work can land before
+  # absence is checked.
+  def with_timeout_trying_first(%Live{} = session, timeout, action) when timeout > 0 and is_function(action) do
+    :ok = PhoenixTest.LiveViewWatcher.watch_view(session.watcher, session.view)
+    view_pid = session.view.pid
+
+    receive do
+      {:watcher, ^view_pid, {:live_view_redirected, redirect_tuple}} ->
+        session
+        |> PhoenixTest.Live.handle_redirect(redirect_tuple)
+        |> with_timeout_trying_first(timeout, action)
+
+      {:watcher, ^view_pid, :live_view_died} ->
+        check_for_redirect(session, action, &via_assert_redirect/1)
+    after
+      0 ->
+        fetch_redirect_info = &via_assert_redirect/1
+        with_retry(session, action, &handle_watched_messages_with_timeout(&1, timeout, action, fetch_redirect_info))
+    end
+  end
+
+  def with_timeout_trying_first(session, timeout, action), do: with_timeout(session, timeout, action)
+
   defp handle_watched_messages_with_timeout(session, timeout, action, fetch_redirect_info) when timeout <= 0 do
     action.(session)
   catch

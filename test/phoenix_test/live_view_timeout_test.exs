@@ -62,6 +62,32 @@ defmodule PhoenixTest.LiveViewTimeoutTest do
       assert "rendered HTML" = LiveViewTimeout.with_timeout(session, 100, action)
     end
 
+    test "with_timeout_trying_first/3 passes without waiting when the action already succeeds", %{session: session} do
+      action = fn session -> DummyLiveView.render_html(session.view.pid) end
+
+      {elapsed_us, result} = :timer.tc(fn -> LiveViewTimeout.with_timeout_trying_first(session, 1000, action) end)
+
+      assert "rendered HTML" = result
+      assert elapsed_us < LiveViewTimeout.interval_wait_time() * 1000
+    end
+
+    test "with_timeout_trying_first/3 falls back to interval retries", %{session: session} do
+      attempts = [:fail, :fail, :pass]
+
+      action = fn session ->
+        attempt = Process.get(:live_view_timeout_attempt, 0)
+        Process.put(:live_view_timeout_attempt, attempt + 1)
+
+        case Enum.at(attempts, attempt) do
+          :fail -> raise ExUnit.AssertionError, message: "Example failure"
+          :pass -> DummyLiveView.render_html(session.view.pid)
+        end
+      end
+
+      assert "rendered HTML" = LiveViewTimeout.with_timeout_trying_first(session, 1000, action)
+      assert Process.get(:live_view_timeout_attempt) == 3
+    end
+
     test "retries action at an interval when it fails", %{session: session} do
       attempts = [:fail, :fail, :pass]
 
