@@ -658,7 +658,7 @@ defmodule PhoenixTest.Live do
   def assert_has(session, selector, opts) when is_list(opts) do
     {timeout, opts} = Keyword.pop(opts, :timeout, 0)
 
-    LiveViewTimeout.with_timeout(session, timeout, fn session ->
+    LiveViewTimeout.with_timeout_trying_first(session, timeout, fn session ->
       Assertions.assert_has(session, selector, opts)
     end)
   end
@@ -678,7 +678,7 @@ defmodule PhoenixTest.Live do
   def assert_path(session, path, opts) when is_list(opts) do
     {timeout, opts} = Keyword.pop(opts, :timeout, 0)
 
-    LiveViewTimeout.with_timeout(session, timeout, fn session ->
+    LiveViewTimeout.with_timeout_trying_first(session, timeout, fn session ->
       session
       |> maybe_sync_current_path(timeout)
       |> Assertions.assert_path(path, opts)
