@@ -732,7 +732,7 @@ defmodule PhoenixTest.Live do
   end
 
   defp maybe_redirect(html, session) when is_binary(html) do
-    case Form.find(html, "form[phx-trigger-action]") do
+    case find_trigger_action_form(html) do
       :not_found ->
         maybe_put_patch_path(session)
 
@@ -749,6 +749,16 @@ defmodule PhoenixTest.Live do
 
       {:found_many, _} ->
         raise ArgumentError, "Found multiple forms with phx-trigger-action."
+    end
+  end
+
+  # Parsing the whole page costs far more than scanning it, and no form can match unless the
+  # attribute name appears in the markup (HTML attribute names are ASCII case-insensitive).
+  defp find_trigger_action_form(html) do
+    if html =~ ~r/phx-trigger-action/i do
+      Form.find(html, "form[phx-trigger-action]")
+    else
+      :not_found
     end
   end
 
