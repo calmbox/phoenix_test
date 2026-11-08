@@ -4,7 +4,7 @@ defmodule PhoenixTest.Element do
   alias PhoenixTest.Html
 
   def build_selector(%LazyHTML{} = html) do
-    {tag, attributes, _} = Html.element(html)
+    {tag, attributes} = Html.tag_and_attributes(html)
 
     Enum.reduce_while(attributes, tag, fn
       {"id", id}, _ when is_binary(id) ->

@@ -95,10 +95,19 @@ defmodule PhoenixTest.Html do
     end
   end
 
+  # Reads only the first node's own tag and attributes. `element/1` would convert its whole
+  # subtree, which for a form is the entire form.
+  def tag_and_attributes(%LazyHTML{} = html) do
+    node = Enum.at(html, 0)
+    [tag] = LazyHTML.tag(node)
+    [attributes] = LazyHTML.attributes(node)
+    {tag, attributes}
+  end
+
   def tag(%LazyHTML{} = html) do
-    case element(html) do
-      {tag, _, _} -> to_string(tag)
-      _ -> nil
+    case Enum.at(html, 0) do
+      nil -> nil
+      %LazyHTML{} = node -> node |> LazyHTML.tag() |> List.first()
     end
   end
 
