@@ -524,9 +524,11 @@ defmodule PhoenixTest.Live do
   end
 
   defp merged_form_data(session, %Form{} = form) do
+    element_names = Form.form_element_names(form)
+
     form.form_data
     |> FormData.override(session.active_form.form_data)
-    |> FormData.filter(fn %{name: name} -> name in Form.form_element_names(form) end)
+    |> FormData.filter(fn %{name: name} -> name in element_names end)
   end
 
   def submit(session) do
